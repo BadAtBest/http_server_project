@@ -3,20 +3,19 @@
 
 ## Goals
 
-1. Write a Basic HTTP server
-2. Handle Basic HTTP requests
-3. Create a client script
-4. Add dynamic routing
-5. Serve Static files
-6. Handle Query Parameters
-7. Add logging
-8. Implement RESTful API
-9. Integrate a database
-10. Set up Ngrok
-11. Implement real-time communication
-12. Enable HTTPS
-13. Add packet analysis
-14. Integrate with Redis
-15. Deploy to Cloud
+1. Write a Basic HTTP server using the python socket module
+2. Handle concurrency using the python selectors module
+3. Remake server using more abstract python socketserver and asyncio modules 
+4. Handle Basic HTTP requests
+5. Deploy to Cloud
+6. Add dynamic routing
+7. Serve Static files
+8. Handle Query Parameters
+9. Add logging
+10. Implement RESTful API
+11. Integrate a database
+14. Enable HTTPS
+15. Add packet analysis
+16. Integrate with Redis
 
 This is an educational project.
