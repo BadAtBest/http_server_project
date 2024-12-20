@@ -7,21 +7,40 @@ and reads server responses for each connection.
 import socket
 import sys
 
-def start_connection(host, port, num_conns): # Can connect to server with multiple sockets.
-    for i in range(num_conns):
+def start_connection(host, port, request, path): # Can connect to server with multiple sockets.
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((host, port))
-                message = f"Hello from client {i + 1}"  # Create a string message
-                s.sendall(message.encode())  # Convert the string to bytes before sending
-                data = s.recv(1024)  # Receive the echoed response as bytes
-                print(f"Client {i + 1}: Received: {data.decode()}")  # Decode bytes back to string
-        except Exception as e:
-            print(f"Client {i + 1}: Connection failed with error: {e}")
 
-if len(sys.argv) != 4:  # Ensure proper command-line arguments are provided
-    print(f"Usage: {sys.argv[0]} <host> <port> <num_connections>")
+                http_request = ( # Constructing HTTP request 
+                    f"{request.upper()} /{path} HTTP/1.1\r\n"
+                    f"Host: {host}\r\n"
+                    f"Connection: close\r\n" # Close the connection after the response
+                    f"\r\n" 
+                )
+                
+                s.sendall(http_request.encode())  # Convert the string to bytes before sending
+                
+                response = b"" #Receive the response
+                while True:
+                    data = s.recv(1024)
+                    if not data:
+                        break
+                    response += data
+                     
+                print(f"Client: Received:\n {response.decode()}")  # Prints decoded response
+
+        except Exception as e:
+            print(f"Client: Connection failed with error: {e}")
+
+if len(sys.argv) != 5:  # Ensure proper command-line arguments are provided
+    print(f"Usage: {sys.argv[0]} <host> <port> <request> <path>")
     sys.exit(1)
 
-host, port, num_conns = sys.argv[1:4]
-start_connection(host, int(port), int(num_conns))
+host, port, request, path = sys.argv[1:5]
+
+if request.upper() not in ["GET"]:
+     print("Error: Unsupported HTTP method. Only GET is supported")
+     sys.exit(1)
+
+start_connection(host, int(port), request, path)
