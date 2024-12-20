@@ -1,118 +1,116 @@
 """
-Version 3.0: HTTP client using socketserver.
-This client connects to a server and sends GET or POST requests, with persistent connection support.
+Version 3.2: Enhanced HTTP client with improved input validation, default path handling,
+and restructured for better modularity. The client supports GET and POST requests,
+with persistent connection management for multiple requests over the same session.
 """
 
 import socket
 import sys
 
 
-def start_connection(host, port, request, path, connection_header):
+def start_connection(host, port, timeout=30):
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((host, port))
-            s.settimeout(30)  # Set a 30-second timeout for the initial request
-
-            # Construct the initial request
-            if request == "GET":
-                if not path.strip():
-                    path = "index.html"  # Default path for GET requests
-                http_request = (
-                    f"{request} /{path} HTTP/1.1\r\n"
-                    f"Host: {host}\r\n"
-                    f"Connection: {connection_header}\r\n"
-                    f"\r\n"
-                )
-            else:  # POST request
-                message = path.strip()
-                content_length = len(message)
-                http_request = (
-                    f"{request} /submit HTTP/1.1\r\n"
-                    f"Host: {host}\r\n"
-                    f"Content-Type: text/plain\r\n"
-                    f"Content-Length: {content_length}\r\n"
-                    f"Connection: {connection_header}\r\n"
-                    f"\r\n"
-                    f"{message}"
-                )
-
-            # Send the initial request
-            s.sendall(http_request.encode())
-            response = b""
-            while True:
-                data = s.recv(1024)
-                if not data:
-                    break
-                response += data
-            print(f"Client: Received:\n{response.decode()}")
-
-            # Handle persistent connections
-            if connection_header.lower() == "keep-alive":
-                print(f"Persistent connection established. Enter new requests or 'exit' to close.")
-                print("Example for GET: 'GET /index.html'")
-                print("Example for POST: 'POST /submit'")
-                while True:
-                    s.settimeout(30)  # 30-second timeout for inactivity
-                    user_response = input("Enter HTTP request and path/message or 'exit':\n").strip()
-
-                    if user_response.lower() == 'exit':
-                        print("Closing persistent connection.")
-                        break
-
-                    if not user_response.upper().startswith(("GET", "POST")):
-                        print("Error: Request must start with 'GET' or 'POST'.")
-                        continue
-
-                    if user_response.upper().startswith("POST"):
-                        message = input("What is the message you would like to POST:\n").strip()
-                        content_length = len(message)
-                        user_response += (
-                            f"\r\nContent-Type: text/plain\r\n"
-                            f"Content-Length: {content_length}\r\n"
-                            f"\r\n"
-                            f"{message}"
-                        )
-                    elif user_response.upper().startswith("GET"):
-                        user_response += "\r\nConnection: keep-alive\r\n"
-
-                    s.sendall(user_response.encode())
-                    response = b""
-                    while True:
-                        data = s.recv(1024)
-                        if not data:
-                            break
-                        response += data
-                    print(f"Client: Received:\n{response.decode()}")
-
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+        s.settimeout(timeout)
+        return s
     except Exception as e:
         print(f"Client: Connection failed with error: {e}")
-
-
-if len(sys.argv) not in [5, 6]:
-    print("Usage for POST: python client.py <host> <port> POST <keep-alive or close>")
-    print("Usage for GET: python client.py <host> <port> GET <path> <keep-alive or close>")
-    sys.exit(1)
-
-host, port, request = sys.argv[1:4]
-request = request.upper()
-
-if request == "POST":
-    connection_header = sys.argv[4]
-    path = input("Enter the message you would like to POST:\n").strip()
-    if not path:
-        print("Error: POST request must include a body.")
         sys.exit(1)
-elif request == "GET":
-    if len(sys.argv) != 6:
-        print("Usage: python client.py <host> <port> GET <path> <keep-alive or close>")
-        sys.exit(1)
-    path, connection_header = sys.argv[4:6]
-else:
-    print("Error: Unsupported HTTP method. Only GET and POST are supported.")
-    sys.exit(1)
 
-if connection_header.lower() not in ["keep-alive", "close"]:
-    print(f"Error: Invalid connection header '{connection_header}'. Must be 'keep-alive' or 'close'.")
-    sys.exit(1)
+def send_http_request(s, http_request): # Problem
+    try:
+        print(f"Sending request:\n{http_request}")
+        s.sendall(http_request.encode())
+        response = b""
+        data = s.recv(1024)
+        print(f"Client: Received:\n{data.decode()}")
+    except Exception as e:
+        print(f"Error while sending request: {e}")
 
-start_connection(host, int(port), request, path, connection_header)
+def handle_persistent_connection(s, host, connection_header):
+    print("Persistent connection established. Enter new requests or 'exit' to close.")
+    print("Examples: 'GET /index.html' or 'POST This is a test message'")
+    while True:
+        try:
+            user_input = input("Enter HTTP request or 'exit':\n").strip()
+            if user_input.lower() == "exit":
+                print("Closing persistent connection.")
+                break
+            if user_input.upper().startswith("GET"):
+                path = user_input.split()[1] if len(user_input.split()) > 1 else "index.html"
+                print(f"Sending GET for path: {path}")
+                GET(s, host, path, connection_header)
+            elif user_input.upper().startswith("POST"):
+                message = input("Enter the message to POST:\n").strip()
+                print(f"Sending POST with message: {message}")
+                POST(s, host, message, connection_header)
+            else:
+                print("Invalid request. Use 'GET <path>' or 'POST <message>'.")
+        except Exception as e:
+            print(f"Error during persistent connection: {e}")
+            break
+
+def GET(s, host, path, connection_header):
+    """Send a GET request to the server."""
+    if not path.strip():
+        path = "index.html"  # Default file
+    try:
+        http_request = (
+            f"GET /{path} HTTP/1.1\r\n"
+            f"Host: {host}\r\n"
+            f"Connection: {connection_header}\r\n"
+            f"\r\n"
+        )
+        send_http_request(s, http_request)
+    except Exception as e:
+        print(f"Error in GET request: {e}")
+
+
+def POST(s, host, message, connection_header):
+    """Send a POST request to the server."""
+    try:
+        content_length = len(message)
+        http_request = (
+            f"POST /submit HTTP/1.1\r\n"
+            f"Host: {host}\r\n"
+            f"Content-Type: text/plain\r\n"
+            f"Content-Length: {content_length}\r\n"
+            f"Connection: {connection_header}\r\n"
+            f"\r\n"
+            f"{message}"
+        )
+        send_http_request(s, http_request)
+    except Exception as e:
+        print(f"Error in POST request: {e}")
+
+
+try:
+    if __name__ == "__main__":
+        host = input("Enter the server host: ").strip()
+        port = int(input("Enter the server port: ").strip())
+        connection_header = input("Enter 'keep-alive' or 'close': ").strip().lower()
+        method = input("Enter the HTTP method (GET or POST): ").strip().upper()
+
+        s = start_connection(host, port)
+
+        if method == "GET":
+            path = input("Enter the file path (default: index.html): ").strip()
+            GET(s, host, path, connection_header)
+
+        elif method == "POST":
+            message = input("Enter the message to POST: ").strip()
+            POST(s, host, message, connection_header)
+
+        else:
+            print("Invalid method. Only GET and POST are supported.")
+            sys.exit(1)
+
+        if connection_header == "keep-alive":
+                    handle_persistent_connection(s, host, "keep-alive")
+        
+except socket.timeout:
+    print("Connection timed out. Please try again later.\n")
+finally:
+    print("\nShutting down client")
+    s.close()

@@ -1,6 +1,7 @@
 """
-Version 3.1: Multi-client HTTP server using socketserver with enhanced error handling,
-support for persistent sessions, and improved compliance with HTTP standards.
+Version 3.2: Multi-client HTTP server with improved modularity, streamlined request handling,
+enhanced logging for POST requests, and better handling of persistent connections.
+This version isolates GET and POST logic into separate methods for clarity and maintainability.
 """
 
 import socketserver
@@ -8,12 +9,14 @@ import sys
 import os
 from datetime import datetime
 
+
 class MyHandler(socketserver.BaseRequestHandler):
     def handle(self):
         while True:
             print(f"Connected by {self.client_address}")
             data = self.request.recv(1024).decode()
             if not data:
+                print("No data received. Closing connection.")
                 return
             print(f"Received:\n{data.strip()}")
 
@@ -30,6 +33,7 @@ class MyHandler(socketserver.BaseRequestHandler):
 
             try:
                 method, path, _ = request_line.split()
+                method = method.upper()
             except ValueError:
                 response = (
                     f"HTTP/1.1 400 Bad Request\r\n"
@@ -44,14 +48,11 @@ class MyHandler(socketserver.BaseRequestHandler):
             # Default path for root requests
             if path == "/" or not path.strip():
                 path = "index.html"
-            file_path = f"static/{path.lstrip('/')}"
 
             if method == "GET":
-                self.GET(file_path)
-
+                self.GET(path)
             elif method == "POST":
                 self.POST(header, body)
-
             else:
                 response = (
                     f"HTTP/1.1 405 Method Not Allowed\r\n"
@@ -62,8 +63,7 @@ class MyHandler(socketserver.BaseRequestHandler):
                 ).encode()
                 self.request.sendall(response)
 
-            # Check Connection header for keep-alive or close
-            connection_type = "close"  # Default behavior
+            connection_type = "close"
             for line in header.split("\r\n"):
                 if line.lower().startswith("connection:"):
                     connection_type = line.split(":")[1].strip().lower()
@@ -73,8 +73,12 @@ class MyHandler(socketserver.BaseRequestHandler):
                 print("Closing connection as requested.")
                 break
 
-    def GET(self, file_path):
-        if os.path.exists(file_path):
+    def GET(self, path):
+        file_path = f"static/{path.lstrip('/')}"
+        if os.path.isdir(file_path):
+            file_path = os.path.join(file_path, "index.html")
+
+        if os.path.exists(file_path) and os.path.isfile(file_path):
             with open(file_path, "rb") as f:
                 file_content = f.read()
 
@@ -85,6 +89,7 @@ class MyHandler(socketserver.BaseRequestHandler):
                 f"Content-Length: {len(file_content)}\r\n"
                 f"\r\n"
             ).encode() + file_content
+
             self.request.sendall(response)
         else:
             error_message = "Error 404: File not found"
@@ -109,10 +114,10 @@ class MyHandler(socketserver.BaseRequestHandler):
             if line.lower().startswith("content-length:"):
                 content_length = int(line.split(":")[1].strip())
                 break
-        
+
         if content_length == 0 or not body.strip():
             self.request.sendall(
-            b"HTTP/1.1 411 Length Required\r\nContent-Type: text/plain\r\nContent-Length: 15\r\n\r\nLength Required\n"
+                b"HTTP/1.1 411 Length Required\r\nContent-Type: text/plain\r\nContent-Length: 15\r\n\r\nLength Required\n"
             )
             return
 
@@ -139,14 +144,17 @@ class MyHandler(socketserver.BaseRequestHandler):
         ).encode()
         self.request.sendall(response)
 
+
 if len(sys.argv) != 3:
     print(f"Usage: {sys.argv[0]} <host> <port>")
     sys.exit(1)
 
 host, port = sys.argv[1], int(sys.argv[2])
 
+
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
+
 
 try:
     server = ThreadedTCPServer((host, port), MyHandler)
