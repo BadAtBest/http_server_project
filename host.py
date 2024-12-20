@@ -47,64 +47,10 @@ class MyHandler(socketserver.BaseRequestHandler):
             file_path = f"static/{path.lstrip('/')}"
 
             if method == "GET":
-                if os.path.exists(file_path):
-                    with open(file_path, "rb") as f:
-                        file_content = f.read()
-
-                    content_type = "text/html" if file_path.endswith(".html") else "application/octet-stream"
-                    response = (
-                        f"HTTP/1.1 200 OK\r\n"
-                        f"Content-Type: {content_type}\r\n"
-                        f"Content-Length: {len(file_content)}\r\n"
-                        f"\r\n"
-                    ).encode() + file_content
-                    self.request.sendall(response)
-                else:
-                    error_message = "Error 404: File not found"
-                    response = (
-                        f"HTTP/1.1 404 Not Found\r\n"
-                        f"Content-Type: text/plain\r\n"
-                        f"Content-Length: {len(error_message)}\r\n"
-                        f"\r\n"
-                        f"{error_message}"
-                    ).encode()
-                    self.request.sendall(response)
+                self.GET(file_path)
 
             elif method == "POST":
-                if len(header) > 8192:  # 8 KB limit for headers
-                    self.request.sendall(
-                        b"HTTP/1.1 413 Payload Too Large\r\nContent-Type: text/plain\r\nContent-Length: 19\r\n\r\nPayload Too Large\n"
-                    )
-                    break
-
-                content_length = 0
-                for line in header.split("\r\n"):
-                    if line.lower().startswith("content-length:"):
-                        content_length = int(line.split(":")[1].strip())
-                        break
-
-                if content_length > 0 and len(body) != content_length:
-                    self.request.sendall(
-                        b"HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 11\r\n\r\nBad Request\n"
-                    )
-                    break
-
-                log_file = "logs/post_log.txt"
-                os.makedirs(os.path.dirname(log_file), exist_ok=True)
-                with open(log_file, "a") as f:
-                    f.write(f"{datetime.now()} - {self.client_address}:\n")
-                    f.write(f"{body}\n")
-                    f.write("-" * 60 + "\n")
-
-                response_message = "Data Logged"
-                response = (
-                    f"HTTP/1.1 200 OK\r\n"
-                    f"Content-Type: text/plain\r\n"
-                    f"Content-Length: {len(response_message)}\r\n"
-                    f"\r\n"
-                    f"{response_message}"
-                ).encode()
-                self.request.sendall(response)
+                self.POST(header, body)
 
             else:
                 response = (
@@ -127,6 +73,71 @@ class MyHandler(socketserver.BaseRequestHandler):
                 print("Closing connection as requested.")
                 break
 
+    def GET(self, file_path):
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                file_content = f.read()
+
+            content_type = "text/html" if file_path.endswith(".html") else "application/octet-stream"
+            response = (
+                f"HTTP/1.1 200 OK\r\n"
+                f"Content-Type: {content_type}\r\n"
+                f"Content-Length: {len(file_content)}\r\n"
+                f"\r\n"
+            ).encode() + file_content
+            self.request.sendall(response)
+        else:
+            error_message = "Error 404: File not found"
+            response = (
+                f"HTTP/1.1 404 Not Found\r\n"
+                f"Content-Type: text/plain\r\n"
+                f"Content-Length: {len(error_message)}\r\n"
+                f"\r\n"
+                f"{error_message}"
+            ).encode()
+            self.request.sendall(response)
+
+    def POST(self, header, body):
+        if len(header) > 8192:  # 8 KB limit for headers
+            self.request.sendall(
+                b"HTTP/1.1 413 Payload Too Large\r\nContent-Type: text/plain\r\nContent-Length: 19\r\n\r\nPayload Too Large\n"
+            )
+            return
+
+        content_length = 0
+        for line in header.split("\r\n"):
+            if line.lower().startswith("content-length:"):
+                content_length = int(line.split(":")[1].strip())
+                break
+        
+        if content_length == 0 or not body.strip():
+            self.request.sendall(
+            b"HTTP/1.1 411 Length Required\r\nContent-Type: text/plain\r\nContent-Length: 15\r\n\r\nLength Required\n"
+            )
+            return
+
+        if content_length > 0 and len(body) != content_length:
+            self.request.sendall(
+                b"HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: 11\r\n\r\nBad Request\n"
+            )
+            return
+
+        log_file = "logs/post_log.txt"
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        with open(log_file, "a") as f:
+            f.write(f"{datetime.now()} - {self.client_address}:\n")
+            f.write(f"{body}\n")
+            f.write("-" * 60 + "\n")
+
+        response_message = "Data Logged"
+        response = (
+            f"HTTP/1.1 200 OK\r\n"
+            f"Content-Type: text/plain\r\n"
+            f"Content-Length: {len(response_message)}\r\n"
+            f"\r\n"
+            f"{response_message}"
+        ).encode()
+        self.request.sendall(response)
 
 if len(sys.argv) != 3:
     print(f"Usage: {sys.argv[0]} <host> <port>")
