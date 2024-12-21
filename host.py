@@ -8,6 +8,7 @@ import socketserver
 import sys
 import os
 from datetime import datetime
+import ssl
 
 
 class MyHandler(socketserver.BaseRequestHandler):
@@ -196,9 +197,12 @@ host, port = sys.argv[1], int(sys.argv[2])
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
 
+context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH) # For HTTPS
+context.load_cert_chain(certfile="ssl/cert.pem", keyfile="ssl/key.pem")
 
 try:
     server = ThreadedTCPServer((host, port), MyHandler)
+    server.socket = context.wrap_socket(server.socket, server_side=True)
     print(f"Starting server on {host}:{port}")
     server.serve_forever()
 except KeyboardInterrupt:
