@@ -1,0 +1,2 @@
+2024-12-21T13:05:42.488676 Client: 192.168.56.1 | Request: POST /submit HTTP/1.1 | Status: 200 OK | Error: NONE
+2024-12-21T13:05:46.656496 Client: 192.168.56.1 | Request: OPTIONS /submit HTTP/1.1 | Status: 200 OK | Error: NONE

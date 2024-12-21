@@ -45,6 +45,8 @@ def handle_persistent_connection(s, host, connection_header):
                 message = input("Enter the message to POST:\n").strip()
                 print(f"Sending POST with message: {message}")
                 POST(s, host, message, connection_header)
+            elif user_input.upper() == "OPTIONS":
+                OPTIONS(s, host, connection_header)
             else:
                 print("Invalid request. Use 'GET <path>' or 'POST <message>'.")
         except Exception as e:
@@ -84,13 +86,24 @@ def POST(s, host, message, connection_header):
     except Exception as e:
         print(f"Error in POST request: {e}")
 
+def OPTIONS(s, host, connection_header):
+    try:
+        http_request = (
+            f"OPTIONS /submit HTTP/1.1\r\n"
+            f"Host: {host}\r\n"
+            f"Connection: {connection_header}\r\n"
+            f"\r\n"
+        )
+        send_http_request(s, http_request)
+    except Exception as e:
+        print(f"Error in OPTIONS request: {e}")
 
 try:
     if __name__ == "__main__":
         host = input("Enter the server host: ").strip()
         port = int(input("Enter the server port: ").strip())
         connection_header = input("Enter 'keep-alive' or 'close': ").strip().lower()
-        method = input("Enter the HTTP method (GET or POST): ").strip().upper()
+        method = input("Enter the HTTP method (GET, POST, or OPTIONS): ").strip().upper()
 
         s = start_connection(host, port)
 
@@ -102,8 +115,11 @@ try:
             message = input("Enter the message to POST: ").strip()
             POST(s, host, message, connection_header)
 
+        elif method == "OPTIONS":
+            OPTIONS(s, host, connection_header)
+
         else:
-            print("Invalid method. Only GET and POST are supported.")
+            print("Invalid method. Only GET, POST, and OPTIONS are supported.")
             sys.exit(1)
 
         if connection_header == "keep-alive":
