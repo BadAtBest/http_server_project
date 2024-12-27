@@ -5,17 +5,16 @@
 
 1. Write a Basic HTTP server using the python socket module
 2. Handle concurrency using the python selectors module
-3. Remake server using more abstract python socketserver and asyncio modules 
+3. Remake server using more abstract python socketserver module 
 4. Handle Basic HTTP requests
-5. Deploy to Cloud
-6. Add dynamic routing
-7. Serve Static files
-8. Handle Query Parameters
-9. Add logging
-10. Implement RESTful API
-11. Integrate a database
-14. Enable HTTPS
-15. Add packet analysis
-16. Integrate with Redis
+5. Add logging
+6. Deploy to Cloud
+7. Implement RESTful API
+8. Add dynamic routing
+9. Serve Static files
+10. Integrate a database
+11. Enable HTTPS
+12. Add packet analysis
+13. Integrate with Redis
 
 This is an educational project.

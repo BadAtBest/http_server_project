@@ -13,5 +13,11 @@ venv/
 # IDE
 .vscode/
 
+# Flask Env
+flask-env/
+
+# Server Key
+http-server-key.pem
+
 # SSL
 ssl/

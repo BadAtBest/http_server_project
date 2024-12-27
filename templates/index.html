@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Justin's CS Projects</title>
+    <!-- Link to CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Link to JavaScript -->
+    <script src="{{ url_for('static', filename='stars.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+    <canvas id="star-canvas"></canvas> <!-- Canvas for the starry background -->
+    <div class="wrapper">
+        <header>
+            <h1>Justin's CS Projects</h1>
+        </header>
+        <main>
+            <label for="project-select">Select a Project:</label>
+            <select id="project-select" onchange="navigateToProject()">
+                <option value="" disabled selected>Choose a project...</option>
+                <option value="project1">Project 1</option>
+                <option value="project2">Project 2</option>
+                <option value="project3">Project 3</option>
+            </select>
+        </main>
+    </div>
+</body>
+</html>
